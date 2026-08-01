@@ -1,0 +1,83 @@
+"""
+PARITY WITH THE PIPELINE THIS WAS EXTRACTED FROM.
+
+A port that merely runs is not a port. These pin the Python against numbers the
+TypeScript produced on three real generated sheets, so a rewrite that quietly
+changes behaviour fails here rather than in someone's game.
+
+Skipped when the reference sheets are not present, so the package stays
+standalone. Point `SPRITEFORGE_REF_SHEETS` at a directory of `<name>-S.png` plus
+`<name>-S.json` (a manifest with `rows[].cells`) to run them.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+
+import numpy as np
+import pytest
+from PIL import Image
+
+from spriteforge.grid import detect_pixel_grid
+
+REF = Path(
+    os.environ.get(
+        "SPRITEFORGE_REF_SHEETS",
+        "/home/lazycat/github/projects/sun/braindeadbot-client/public/sprites",
+    )
+)
+
+# (best factor, its confidence %, cell purity %) as the TypeScript reported them.
+#
+# `flat_share` is deliberately NOT pinned here: the port measures it over OPAQUE
+# pairs only, where the TS counted every pair. See `_flat_share` — the TS number
+# depended on an in-memory buffer keeping RGB under alpha=0, which a PNG round
+# trip destroys, and the divergence fixes a latent gate bug rather than causing
+# one. What must not drift is the factor, the purity and the VERDICT.
+EXPECTED = {
+    "jester": (5, 0.4, 5.9),
+    "beaver": (10, 0.3, 2.2),
+    "frog": (4, 2.1, 7.9),
+}
+
+
+def _load(name: str) -> tuple[np.ndarray, list[tuple[int, int, int, int]]]:
+    manifest = json.loads((REF / f"{name}-S.json").read_text())
+    img = np.asarray(Image.open(REF / f"{name}-S.png").convert("RGBA"))
+    boxes = [tuple(c) for row in manifest["rows"] for c in row["cells"]]
+    return img, boxes
+
+
+@pytest.mark.parametrize("name", sorted(EXPECTED))
+def test_matches_the_typescript_gate(name: str) -> None:
+    if not (REF / f"{name}-S.png").exists():
+        pytest.skip(f"reference sheets not present at {REF}")
+    want_factor, want_conf, want_purity = EXPECTED[name]
+    img, boxes = _load(name)
+    r = detect_pixel_grid(img, boxes)
+
+    top = max(r.scores, key=lambda s: s[1])
+    assert top[0] == want_factor, f"{name}: best factor drifted"
+    assert top[1] * 100 == pytest.approx(want_conf, abs=0.15), f"{name}: confidence drifted"
+    assert r.cell_purity * 100 == pytest.approx(want_purity, abs=0.1), f"{name}: cell purity drifted"
+
+    # The verdict is the thing anyone actually acts on.
+    assert not r.gridded
+    assert "NOT PIXEL ART" in r.verdict
+
+
+@pytest.mark.parametrize("name", sorted(EXPECTED))
+def test_flatness_measures_art_not_empty_space(name: str) -> None:
+    """The divergence, pinned so it cannot silently revert.
+
+    Counting transparent pairs put the jester at 34% where its ART is 1.7%, and
+    `NATIVE_FLAT_SHARE` is a 0.55 gate — a sparse sheet could have crossed it on
+    empty space alone.
+    """
+    if not (REF / f"{name}-S.png").exists():
+        pytest.skip(f"reference sheets not present at {REF}")
+    img, boxes = _load(name)
+    r = detect_pixel_grid(img, boxes)
+    assert r.flat_share < 0.10, f"{name}: flatness is counting the empty field again"
