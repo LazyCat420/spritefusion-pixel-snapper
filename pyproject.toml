@@ -3,7 +3,7 @@ name = "spriteforge"
 version = "0.1.0"
 description = "Sprite-sheet import pipeline: gate, matte, slice, resample, palette snap. Palette-agnostic."
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.24", "pillow>=10"]
+dependencies = ["numpy>=1.24", "pillow>=10", "scipy>=1.11"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

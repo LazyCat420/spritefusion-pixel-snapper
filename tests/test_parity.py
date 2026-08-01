@@ -21,6 +21,7 @@ import pytest
 from PIL import Image
 
 from spriteforge.grid import detect_pixel_grid
+from spriteforge.matte import matte, rgb_hex
 
 REF = Path(
     os.environ.get(
@@ -81,3 +82,26 @@ def test_flatness_measures_art_not_empty_space(name: str) -> None:
     img, boxes = _load(name)
     r = detect_pixel_grid(img, boxes)
     assert r.flat_share < 0.10, f"{name}: flatness is counting the empty field again"
+
+
+#: The RAW frog sheet, before matting — the case the matte exists for.
+RAW_FROG = Path(
+    os.environ.get(
+        "SPRITEFORGE_RAW_FROG",
+        "/tmp/claude-1000/-home-lazycat-github-projects-sun/"
+        "4d8618f5-3841-4241-a83f-1e43a1bb7365/scratchpad/inbox-stash/frog-ORIGINAL.png",
+    )
+)
+
+
+def test_matte_matches_the_typescript() -> None:
+    """TS reported: bg #fdfdfd (100% of the border) — keyed 73.2%, 1267 pockets."""
+    if not RAW_FROG.exists():
+        pytest.skip(f"raw sheet not present at {RAW_FROG}")
+    img = np.asarray(Image.open(RAW_FROG).convert("RGBA"))
+    _, rep = matte(img)
+    assert rgb_hex(rep.bg) == "#fdfdfd"
+    assert rep.bg_confidence * 100 == pytest.approx(100, abs=0.5)
+    assert rep.keyed_pct * 100 == pytest.approx(73.2, abs=0.1)
+    assert len(rep.enclosed) == 1267
+    assert rep.failures == []
