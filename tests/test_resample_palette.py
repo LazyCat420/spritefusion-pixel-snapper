@@ -148,3 +148,13 @@ class TestEviction:
         _, info = P.evict_to(P.snap(self.build(), self.PAL), self.PAL, 4)
         assert info["evicted"] > 0
         assert 0.0 < info["moved_share"] <= 1.0
+
+
+def test_an_empty_palette_is_refused_at_the_boundary() -> None:
+    # A caller whose extraction pattern matched nothing gets an empty list. Without
+    # this guard the failure surfaces frames later as a numpy broadcast error that
+    # says nothing about the real mistake — and since the palette always comes from
+    # outside, the boundary is exactly where it has to be caught.
+    for empty in ([], (), np.zeros((0, 3), np.uint8)):
+        with pytest.raises(ValueError, match="empty palette"):
+            P.as_array(empty)

@@ -5,6 +5,9 @@ description = "Sprite-sheet import pipeline: gate, matte, slice, resample, palet
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24", "pillow>=10", "scipy>=1.11"]
 
+[project.scripts]
+spriteforge = "spriteforge.cli:run"
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 

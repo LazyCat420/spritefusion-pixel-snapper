@@ -133,3 +133,92 @@ Pixel Snapper is a [Sprite Fusion](https://www.spritefusion.com/pixel-art-genera
 ## License
 
 MIT License [Hugo Duprez](https://www.hugoduprez.com/)
+
+---
+
+# spriteforge — the Python sprite-sheet pipeline
+
+A sprite-sheet importer built alongside the Rust snapper in this repo. The Rust
+half snaps ONE image to a pixel grid; this half takes a whole SHEET and answers
+whether it is usable, where its frames are, and what is wrong with it.
+
+    pip install -e ".[dev]"
+    python -m spriteforge sheet.png --rows idle,walk,attack,death
+
+```
+═══ frog.png — 1402x1122
+SLICE  4 rows [5/5/4/5], 19 frames
+GRID   NOT PIXEL ART — no lattice (best x4 at 2.1%, need 90%) and only 1% flat
+       neighbours. Cell purity at x4: 7.9% — a real lattice is ~100%.
+MATTE  bg #fdfdfd (100% of the border) — keyed 73.2%, 1267 pocket(s) LEFT OPAQUE
+GUTTERS  1 occupied gap(s) — the sheet holds something that is not the creature.
+  ✗ attack seam 2 (x~791): 12.7% of the gap is INK (319px). ... The row also
+    sliced to 4 cells where the pitch expects 5, so it MERGED.
+```
+
+That is a real sheet, and every line of it was a defect someone shipped.
+
+## The one rule
+
+**It holds no palette.** One is passed in, always — `as_array` refuses an empty
+list rather than failing later inside numpy. Its predecessor carried a private
+copy of a 32-colour palette and "would go stale the first time the palette moved
+and report confident nonsense"; it was deleted for exactly that.
+
+For the same reason it does not **score**. A census comparing imported art
+against a game's painted roster needs that game's real crush and real palette.
+The split is: **this tool makes the sheet, the game judges it.**
+
+## Modules
+
+| | |
+|---|---|
+| `grid` | is this really pixel art, at what block size, and how pure are its cells |
+| `matte` | opaque background → alpha, by flood fill from the border |
+| `slice` | a sheet → ragged rows of cells, ruled lines and captions removed |
+| `gutter` | is anything sitting BETWEEN frames that should not be |
+| `resample` | a cell → its target footprint (box / dominant / k-centroid / nearest) |
+| `palette` | snap to a palette you own, and evict to an entry budget |
+
+## Things that are true and surprising
+
+Each of these was measured, and each one cost a wrong turn first.
+
+- **A grid detector can be confident about a lattice that is not there.**
+  Peak-spacing regularity reads 0.79 on a sheet whose blocks are 6.8% pure. That
+  is why `grid` reports **cell purity** — "each cell is 7% its own colour" — and
+  deliberately does not gate on regularity.
+- **"NOT PIXEL ART" refuses the 1:1 claim, not the sheet.** Every real sheet
+  tested fails it and three render fine through the resample path. A hard reject
+  at some purity threshold would reject all of them, including the one a human
+  picked as best.
+- **You cannot measure a gutter with the cell rects you got back.** A bridging
+  artifact MERGES the pair, so the gap that held it is not in the output. Seams
+  come from a nominal pitch instead — which survives the merge that poisons it.
+- **`nearest` is not "committing" on continuous art.** True for art already on a
+  grid, backwards otherwise: point-sampling keeps whichever noise pixel the
+  centre hits. k-centroid asks what the block is made of.
+- **The snap metric barely matters.** luma 36.84, Lab 35.97, distinct-entry
+  36.65 dE — a 2.4% spread. The error is not which entry a colour picks; it is
+  that the colour it wants is not in the palette. In-palette source round-trips
+  the same pipeline at **dE 1.57**.
+- **Flatness must ignore empty space.** Counting transparent pairs tripled the
+  number on a PNG round-trip, and the native-pixel-art gate is a share — a sparse
+  sheet could cross it on emptiness alone.
+
+## Known limit
+
+The gutter check catches artifacts that **bridge** two frames. One sitting
+*beside* a figure gets absorbed into that figure's cell, every gap then measures
+a genuine 0%, and no width signal separates it either. That class needs the
+generation rule and a look at the contact sheet. It is pinned as a
+characterisation test rather than left implied.
+
+## Tests
+
+    python -m pytest        # 84
+
+Parity tests pin this against the TypeScript pipeline it was extracted from —
+same factor, same confidence, same cell purity, and **all 56 cell rects identical
+across three real sheets**. They skip when the reference sheets are absent, so
+the package stands alone.

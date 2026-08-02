@@ -40,7 +40,20 @@ Metric = str  # "luma" | "lab"
 
 
 def as_array(palette) -> np.ndarray:
-    """Accept hex ints, `#rrggbb` strings, or (r,g,b) triples. Returns Nx3 uint8."""
+    """Accept hex ints, `#rrggbb` strings, or (r,g,b) triples. Returns Nx3 uint8.
+
+    Refuses an EMPTY palette loudly. A caller extracting colours from a source
+    file with a bad pattern gets an empty list, and without this the failure
+    surfaces several frames later as `operands could not be broadcast together
+    with shapes (0,) (3,)` — which says nothing about the actual mistake. Since
+    this package's whole contract is that the palette comes from outside, the
+    boundary is exactly where that has to be checked.
+    """
+    if palette is None or len(palette) == 0:
+        raise ValueError(
+            "empty palette. This package holds none by design, so one must be passed in — "
+            "check whatever produced this list actually matched anything."
+        )
     out = []
     for c in palette:
         if isinstance(c, str):
