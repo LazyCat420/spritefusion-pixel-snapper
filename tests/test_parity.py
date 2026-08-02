@@ -22,6 +22,7 @@ from PIL import Image
 
 from spriteforge.grid import detect_pixel_grid
 from spriteforge.matte import matte, rgb_hex
+from spriteforge.gutter import gutter_report
 from spriteforge.slice import slice_sheet_detail
 
 REF = Path(
@@ -129,3 +130,40 @@ def test_slicer_reproduces_every_cell_rect(name: str) -> None:
     want = [tuple(c) for row in manifest["rows"] for c in row["cells"]]
     got = [c for r in rows for c in r.cells]
     assert got == want, f"{name}: cell rects drifted from the TypeScript"
+
+
+CLIPS = {
+    "jester": ["idle", "attack", "walk", "stumble", "death"],
+    "beaver": ["idle", "walk", "attack", "death"],
+    "frog": ["idle", "walk", "attack", "death"],
+}
+
+
+@pytest.mark.parametrize("name", sorted(CLIPS))
+def test_shipped_sheets_have_clean_gutters(name: str) -> None:
+    """The floor the gate's threshold is set against: exactly zero, on real art."""
+    if not (REF / f"{name}-S.png").exists():
+        pytest.skip(f"reference sheets not present at {REF}")
+    img = np.asarray(Image.open(REF / f"{name}-S.png").convert("RGBA"))
+    d = slice_sheet_detail(img[..., 3])
+    r = gutter_report(d.mask, d.rows, CLIPS[name])
+    assert r.failures == [], r.failures
+    worst = max((s.pct for row in r.rows for s in row.seams), default=0.0)
+    assert worst == 0.0, f"{name}: worst clean seam is {worst:.3%}, not 0"
+
+
+def test_it_catches_the_real_laser_bridge() -> None:
+    """The defect that shipped: a beam crossing the gap between two attack frames.
+
+    It merged them, so the pipeline saw 4 cells where the pitch expects 5 — which
+    is precisely the situation where the returned rects cannot be used.
+    """
+    if not RAW_FROG.exists():
+        pytest.skip(f"raw sheet not present at {RAW_FROG}")
+    img = np.asarray(Image.open(RAW_FROG).convert("RGBA"))
+    matted, _ = matte(img)
+    d = slice_sheet_detail(matted[..., 3])
+    r = gutter_report(d.mask, d.rows, CLIPS["frog"])
+    assert [len(x.cells) for x in d.rows] == [5, 5, 4, 5], "the fixture no longer reproduces the merge"
+    assert r.failures, "the real laser bridge was not caught"
+    assert any("attack" in f and "MERGED" in f for f in r.failures)
