@@ -22,6 +22,7 @@ from PIL import Image
 
 from spriteforge.grid import detect_pixel_grid
 from spriteforge.matte import matte, rgb_hex
+from spriteforge.slice import slice_sheet_detail
 
 REF = Path(
     os.environ.get(
@@ -105,3 +106,26 @@ def test_matte_matches_the_typescript() -> None:
     assert rep.keyed_pct * 100 == pytest.approx(73.2, abs=0.1)
     assert len(rep.enclosed) == 1267
     assert rep.failures == []
+
+
+#: Cell counts the TypeScript slicer reported, per clip row.
+SHAPES = {"jester": [4, 4, 6, 2, 4], "beaver": [4, 4, 4, 4], "frog": [5, 5, 5, 5]}
+
+
+@pytest.mark.parametrize("name", sorted(SHAPES))
+def test_slicer_reproduces_every_cell_rect(name: str) -> None:
+    """Not just the same SHAPE — the same rects, to the pixel.
+
+    Cell counts can match while every rect is a few pixels off, which then moves
+    every downstream number. All 56 rects across the three sheets are identical.
+    """
+    if not (REF / f"{name}-S.png").exists():
+        pytest.skip(f"reference sheets not present at {REF}")
+    img = np.asarray(Image.open(REF / f"{name}-S.png").convert("RGBA"))
+    rows = slice_sheet_detail(img[..., 3]).rows
+    assert [len(r.cells) for r in rows] == SHAPES[name]
+
+    manifest = json.loads((REF / f"{name}-S.json").read_text())
+    want = [tuple(c) for row in manifest["rows"] for c in row["cells"]]
+    got = [c for r in rows for c in r.cells]
+    assert got == want, f"{name}: cell rects drifted from the TypeScript"
