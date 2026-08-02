@@ -26,5 +26,21 @@ Python importer, so the split is: this tool makes the sheet, the game judges it.
 """
 
 from .grid import GridReport, block_reduce, cell_purity, detect_pixel_grid
+from .gutter import GutterReport, gutter_report
+from .matte import MatteReport, estimate_background, matte, rgb_hex
+from .palette import evict_to, nearest_index, snap, to_lab
+from .resample import resample_cell
+from .slice import Cell, SheetRow, SliceDetail, equal_cells, slice_sheet, slice_sheet_detail
 
-__all__ = ["GridReport", "detect_pixel_grid", "cell_purity", "block_reduce"]
+__all__ = [
+    # gate
+    "GridReport", "detect_pixel_grid", "cell_purity", "block_reduce",
+    # matte
+    "MatteReport", "matte", "estimate_background", "rgb_hex",
+    # slice
+    "Cell", "SheetRow", "SliceDetail", "slice_sheet", "slice_sheet_detail", "equal_cells",
+    # gutter
+    "GutterReport", "gutter_report",
+    # resample + palette (the palette is always PASSED IN)
+    "resample_cell", "snap", "evict_to", "nearest_index", "to_lab",
+]
