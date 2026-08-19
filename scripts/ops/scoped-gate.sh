@@ -96,6 +96,15 @@ if [ "$DRY" = 1 ]; then
   exit 0
 fi
 
+# The toolchain is needed when a windows target is configured, and ALSO when
+# the repo's own .cargo/config.toml already builds windows by default (in
+# which case every ordinary leg is a windows build) — video-editor's shape.
+NEED_WIN="${GATE_NEEDS_WIN_TOOLCHAIN:-0}"
+for t in ${GATE_TARGETS[@]+"${GATE_TARGETS[@]}"}; do
+  case "$t" in *windows*) NEED_WIN=1; break ;; esac
+done
+[ "$NEED_WIN" = 1 ] && { gate_win_toolchain_path || true; }
+
 meter_grab
 lease_target_dir
 
