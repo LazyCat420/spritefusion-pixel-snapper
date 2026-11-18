@@ -1,16 +1,10 @@
 [advisories]
 yanked = "deny"
-# Unmaintained, no replacement on our stack today:
-#   RUSTSEC-2024-0436 paste          — macro-only, via the wgpu/glam stack
-#   RUSTSEC-2026-0192 rustybuzz      — text shaping via the font stack
-#   RUSTSEC-2026-0206 ttf-parser     — ditto
-#   RUSTSEC-2023-0089 atomic-polyfill — via embedded-* HAL crates
-#   RUSTSEC-2026-0097 rand 0.8       — unsound ONLY when a custom log logger
-#       calls rand::rng(); this crate defines no logger and draws only from
-#       ChaCha8Rng/small_rng. rand 0.8->0.9 is a breaking production change
-#       outside this tooling slice; tracked in the SmallRust report.
+# Nothing to ignore: this dependency tree triggers no advisories. The rand
+# unsoundness (RUSTSEC-2026-0097) was fixed by the semver-compatible bump
+# rand 0.8.5 -> 0.8.8 (patched range >=0.8.6, <0.9.0), not ignored.
 # Vulnerabilities are NOT ignored: fix them with `cargo update -p <crate>`.
-ignore = ["RUSTSEC-2024-0436", "RUSTSEC-2026-0192", "RUSTSEC-2026-0206", "RUSTSEC-2023-0089", "RUSTSEC-2026-0097"]
+ignore = []
 
 [licenses]
 allow = [
