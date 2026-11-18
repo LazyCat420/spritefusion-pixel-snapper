@@ -1,0 +1,19 @@
+# clippy warning baseline — recorded 2026-11-18
+# Command: cargo clippy --all-targets (rustc 1.94.1, [lints] table at warn level in Cargo.toml)
+# Count method: compiler-message JSON diagnostics with level == "warning"
+# (lib + bin + test targets; wasm32 lib check is separate and warning-free).
+# Purpose: ratchet reference. New code must not raise the total; lowering it is welcome.
+# Enforced by: gate-config.sh GATE_CLIPPY_ENFORCE=1 fails on rc=101 (hard errors only;
+# warn-level lints do not fail). Do not flip this repo's table to deny without
+# clearing this baseline first.
+
+total_warnings=91
+
+top_lints:
+    50  clippy::cast_possible_truncation
+    34  clippy::cast_lossless
+     4  clippy::needless_pass_by_value
+     2  clippy::too_many_lines
+
+# Quantizer math (k-means/pixel snapping) accounts for nearly everything. Small
+# enough to actually fix in one sitting if desired.

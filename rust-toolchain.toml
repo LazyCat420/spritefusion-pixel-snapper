@@ -1,0 +1,5 @@
+[toolchain]
+channel = "1.94.1"
+components = ["rustfmt", "clippy"]
+# The shipped artifact is the wasm cdylib; the gate leg checks this target.
+targets = ["wasm32-unknown-unknown"]

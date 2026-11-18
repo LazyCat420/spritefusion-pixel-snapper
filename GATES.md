@@ -65,3 +65,15 @@ which it got).
 ## Open items
 
 - Nothing outstanding. All four legs are green and enforcing on `main`.
+
+## 2026-11-18 tooling wave
+
+Added: `rust-toolchain.toml` (1.94.1 + wasm32 target), `[lints]` mirror of
+drift-king's engine table at **warn** level in `Cargo.toml` (clippy leg stays
+green — warn-level diagnostics keep rc=0; counts recorded in
+`clippy-baseline.txt`), `.config/nextest.toml` with `[profile.gate]
+fail-fast = false`, `deny.toml` (drift-king family policy plus a documented
+ignore for RUSTSEC-2026-0097, the `rand` 0.8 logger-unsoundness advisory —
+unexploitable here: no logger, only `ChaCha8Rng`/`small_rng` are used), and
+`tests/smoke.rs` (2 deterministic headless tests; failure-proven by clamping
+`k_colors` in `From<&BatchConfig>`, which flipped the pinned digest red).

@@ -31,3 +31,23 @@ rayon = "1.10"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 getrandom = { version = "0.2", features = ["js"] }
+
+# Tooling standard 2026-11-17: mirrors the drift-king engine `[workspace.lints]`
+# table (games/drift-king/engine/Cargo.toml) at warn level. Baseline warning
+# counts: clippy-baseline.txt; promote warn -> deny only at zero.
+[lints.rust]
+unsafe_code = "warn"
+unused_must_use = "warn"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+# Hand-picked pedantic subset: catches real bugs, not style.
+cast_lossless = "warn"
+cast_possible_truncation = "warn"
+float_cmp = "warn"
+needless_pass_by_value = "warn"
+redundant_closure_for_method_calls = "warn"
+semicolon_if_nothing_returned = "warn"
+too_many_lines = "warn"
+cognitive_complexity = "warn"
