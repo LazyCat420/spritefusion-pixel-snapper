@@ -7,7 +7,7 @@
 # warn-level lints do not fail). Do not flip this repo's table to deny without
 # clearing this baseline first.
 
-total_warnings=91
+total_warnings=90
 
 top_lints:
     50  clippy::cast_possible_truncation

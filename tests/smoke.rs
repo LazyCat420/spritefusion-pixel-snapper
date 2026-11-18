@@ -67,7 +67,7 @@ fn snap_once(tag: &str) -> Vec<u8> {
         pixel_size_override: None,
         palette: None,
     };
-    let mut finished = AtomicUsize::new(0);
+    let finished = AtomicUsize::new(0);
     process_batch_with_reporter(&config, |ev| {
         if let spritefusion_pixel_snapper::BatchEvent::Finished { .. } = ev {
             finished.fetch_add(1, Ordering::Relaxed);
